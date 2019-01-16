@@ -68,7 +68,7 @@ const start = async () => {
 						downloaded: 1,
 						status: 1,
 					}).then(function (data) {})
-					.catch(function (data) {});
+					.catch(function (error) {});
 
 					// filePath = 'E:\\www\\opensource\\nodejs\\envato\\download\\Install_CopyTransControlCenter-VMYK5P4.exe';
 					var googleFileId = await upload(file, filePath);//, function(googleFileId) {
@@ -84,12 +84,10 @@ const start = async () => {
 					//});
 
 				} else {
-					knex('books').where('file_id', file_id).update({
-						size: filesize,
-						mime: filetype,
+					knex('files').where('file_id', file_id).update({
 						status: 0,
 					}).then(function (data) {})
-					.catch(function (error) {console.error(error.message);});
+					.catch(function (error) {});
 				}
 				console.log('Wait download done');
 			} else {
