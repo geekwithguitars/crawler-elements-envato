@@ -26,20 +26,25 @@ var cookies;
 // Không thể xử lý tự đông login, bởi vì cần xác thực reCaptcha
 // -> login qua browser -> copy cookie, token -> paste here
 var headers = {
-			'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
-			'content-type': 'application/json',
-			'x-csrf-token': 'Bl0RVWS5T0auxhNkt3qZrYIMidvSzqmsXFLiot7Mt4A=',
-			'cookie': '__cfduid=d676f246e25f609d178d6592a465cfb561547624929; original_landing_page_url=https://elements.envato.com/f-letter-logo-template-DY69DA; _csrf_3=Bl0RVWS5T0auxhNkt3qZrYIMidvSzqmsXFLiot7Mt4A%3D; _elements_session_3=88386b5da3dd448760f320aeedcd83fc'
-		}
+	'user-agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36',
+	'content-type': 'application/json',
+	'x-csrf-token': 'Bl0RVWS5T0auxhNkt3qZrYIMidvSzqmsXFLiot7Mt4A=',
+	'cookie': '__cfduid=d676f246e25f609d178d6592a465cfb561547624929; original_landing_page_url=https://elements.envato.com/f-letter-logo-template-DY69DA; _csrf_3=Bl0RVWS5T0auxhNkt3qZrYIMidvSzqmsXFLiot7Mt4A%3D; _elements_session_3=88386b5da3dd448760f320aeedcd83fc'
+}
+var limit = 200;
 const start = async () => {
   var csrf = ''; // await getCsrf();
   var token = true; // await getLogin(csrf);
   if(token) {
   	// var session = await getSession(token);
-  	var files = await knex.select('*').from('files').where('uploaded', 0).andWhere('type', 'web-templates').andWhere('categories', 'like', '%Admin Templates%').limit(200);
+  	var files = await knex.select('*').from('files').where('uploaded', 0)
+	  	.andWhere('type', 'web-templates')
+		// .andWhere('categories', 'like', '%Admin Templates%')
+		.orderBy('categories', 'asc')
+		.limit(limit);
 	console.log('Found : ', files.length, ' files');
-  	await asyncForEach(files, async (file) => {
-		console.log('Start process file: ', file.title, ' (', file.file_id, ')');
+  	await asyncForEach(files, async (file, index) => {
+		console.log("\n", index, '. Start process file: ', file.title, ' (', file.file_id, ')');
 		var file_id = file.file_id;
 		var licenseInfo = await getLicense(file_id, null);
 		//var licenseInfo = '';
@@ -52,7 +57,7 @@ const start = async () => {
 				var fileInfo = path.parse(filename);
 				filename = fileInfo.name + '-' + file_id + fileInfo.ext;
 				var filePath = __dirname + '/download/' + filename;
-				var headers = await download(downloadUrl, filePath); // 'Download done'
+				var headers = await download(downloadUrl, filePath);
 				if(headers && headers["content-length"]) {
 					var filesize = parseInt(headers["content-length"]);
 					var filetype = headers["content-type"];
