@@ -23,7 +23,9 @@ exports.up = function(knex, Promise) {
 		table.boolean('downloaded').defaultTo(0);
 		table.boolean('uploaded').defaultTo(0);
 		table.boolean('status').nullable();
+		table.text('categories').nullable();
 		table.text('description').nullable().collate('utf8_unicode_ci');
+		table.timestamps();
 	});
 };
 

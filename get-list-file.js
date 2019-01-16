@@ -70,23 +70,32 @@ function doSomeDiscovery(json, callback) {
 
 function saveItems(items, type) {
 	var rows = [];
-	items.forEach(function(item, index) {
+	items.forEach(async function(item, index) {
 		var id = item.id;
 		var title = item.title;
 		var slug = item.slug;
-		var name = item.id;
+		var name = null;
 		var size = item.fileSizeBytes;
 		var description = item.description;
-
-		rows.push({
+		//var categories = type == 'web-templates' && item.categories.includes('Admin Templates') ? 'Admin Templates' : item.categories.join('|');
+		var categories = item.categories.join('|');
+		var row = {
 			file_id: id,
 			title: title,
 			size: size,
 			type: type,
 			slug: slug,
 			name: name,
+			categories: categories,
 			//description: description,
-		});
+		};
+		var file = await knex.select('*').from('files').where('file_id', id).first();
+		if(file) {
+			knex('files').where('file_id', id).update({ categories: categories}).then(function (data) {}).catch(function (err) {});
+			console.log("Updated file %s set categories: %s", id, categories);
+		} else {
+			rows.push(row);
+		}
 	});
 	if(rows.length) {
 		knex('files').insert(rows)// .into('files')

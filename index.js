@@ -36,8 +36,8 @@ const start = async () => {
   var token = true; // await getLogin(csrf);
   if(token) {
   	// var session = await getSession(token);
-  	var files = await knex.select('*').from('files').where('uploaded', 0).andWhere('type', 'web-templates').limit(200);
-
+  	var files = await knex.select('*').from('files').where('uploaded', 0).andWhere('type', 'web-templates').andWhere('categories', 'like', '%Admin Templates%').limit(200);
+	console.log('Found : ', files.length, ' files');
   	await asyncForEach(files, async (file) => {
 		console.log('Start process file: ', file.title, ' (', file.file_id, ')');
 		var file_id = file.file_id;
@@ -66,7 +66,7 @@ const start = async () => {
 					.catch(function (data) {});
 
 					// filePath = 'E:\\www\\opensource\\nodejs\\envato\\download\\Install_CopyTransControlCenter-VMYK5P4.exe';
-					upload(file, filePath, function(googleFileId) {
+					var googleFileId = await upload(file, filePath);//, function(googleFileId) {
 						if(googleFileId) {
 							knex('files').where('file_id', file_id).update({
 								fileId: googleFileId,
@@ -76,7 +76,7 @@ const start = async () => {
 							})
 							.catch(function (error) {console.error(error.message);});
 						}
-					});
+					//});
 
 				} else {
 					knex('books').where('file_id', file_id).update({
@@ -90,7 +90,7 @@ const start = async () => {
 			} else {
 				console.error('Cannot get download url!');
 			}
-			await waitFor(90000);
+			await waitFor(10000);
 		} else {
 			process.exit(1);
 		}
@@ -178,13 +178,13 @@ async function getLicense(fileId, _headers) {
 		//=> '<!doctype html> ...'
 	}) */.catch(error => {
 		console.error('Error when getLicense: ', error.message ? error.message : error.response.body);
-		//=> 'Internal server error ...'
+		process.exit(1);
 	});
 	var json = response ? JSON.parse(response.body) : true;
 	return json;
 }
 
-async function getDownloadUrl(fileId, headerss) {
+async function getDownloadUrl(fileId, _headers) {
 	const response = await got.post('https://elements.envato.com/api/v1/items/' + fileId + '/download.json', {
 		headers: _headers ? _headers : headers,
 		body: JSON.stringify({licenseType: 'trial'})
@@ -241,42 +241,47 @@ function download(url, filePath) {
 var gdrive = {};
 var outputUpload = {};
 function upload(file, filePath, callback) {
-	console.log('Start upload: ', filePath);
-	var id = file.id;
-	var args = [
-		'gdrive', 
-		'--refresh-token "' + process.env.GDRIVE_REFRESH_TOKEN +'"', 
-		'upload "'+filePath+'"', 
-		'-p "' + process.env.GDRIVE_FOLDER_ID + '"',
-		'--share',
-		'--delete',
-	];
-	var cmd = args.join(' ');
-	outputUpload[id] = '';
-	gdrive[id] = exec(cmd);
-	gdrive[id].stdout.on('data', function(data) {
-		var line = data.toString();
-		console.log(line.trim());
-		outputUpload[id] += line;
-	});
-	gdrive[id].stderr.on('data', function(data) {
-		var line = data.toString();
-		console.log(line.trim());
-		outputUpload[id] += line;
-	});
-	gdrive[id].on('exit', function(code) {
-		var result = outputUpload[id];
-		if (!code) {
-			console.log('Upload success!');
-		} else {
-			console.error('Upload error!');
-		}
-		var match = result.match(/(?:google|googledrive)\.com\/(?:a\/[^\/]+\/)?(?:open\?id=|uc\?id=|file\/d\/)([-\w]{25,})/i);
-		if(match) {
-			callback(match[1]);
-		} else {
-			console.error('Cannot get url share: ', result);
-		}
-		callback();
+	return new Promise(function(resolve, reject) {
+		console.log('Start upload: ', filePath);
+		var id = file.id;
+		var args = [
+			'gdrive', 
+			'--refresh-token "' + process.env.GDRIVE_REFRESH_TOKEN +'"', 
+			'upload "'+filePath+'"', 
+			'-p "' + process.env.GDRIVE_FOLDER_ID + '"',
+			'--share',
+			'--delete',
+		];
+		var cmd = args.join(' ');
+		outputUpload[id] = '';
+		gdrive[id] = exec(cmd);
+		gdrive[id].stdout.on('data', function(data) {
+			var line = data.toString();
+			console.log(line.trim());
+			outputUpload[id] += line;
+		});
+		gdrive[id].stderr.on('data', function(data) {
+			var line = data.toString();
+			console.log(line.trim());
+			outputUpload[id] += line;
+		});
+		gdrive[id].on('exit', function(code) {
+			var result = outputUpload[id];
+			if (!code) {
+				console.log('Upload success!');
+			} else {
+				console.error('Upload error!');
+			}
+			var match = result.match(/(?:google|googledrive)\.com\/(?:a\/[^\/]+\/)?(?:open\?id=|uc\?id=|file\/d\/)([-\w]{25,})/i);
+			if(match) {
+				var fileId = match[1];
+				// callback(fileId);
+				resolve(fileId)
+			} else {
+				console.error('Cannot get url share: ', result);
+			}
+			// callback();
+			reject();
+		});
 	});
 }
