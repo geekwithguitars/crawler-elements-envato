@@ -1,0 +1,7 @@
+
+.history/
+.data/
+download/*
+!download/.gitkeep
+node_modules/
+.env
